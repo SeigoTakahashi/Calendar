@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Insert title here</title>
+</head>
+
+<body>
+	<form id="goal-form" th:action="@{/addGoal}" method="POST">
+		<label for="title">目標:</label>
+		<input type="text" id="title" name="title" required>
+		<label for="start_date">開始日</label>
+		<input type="date" id="start_date" name="start_date" required>
+		<label for="end_date">終了日</label>
+		<input type="date" id="end_date" name="end_date" required>
+		<button type="submit">目標を設定</button>
+	</form>
+
+</body>
+
+</html>

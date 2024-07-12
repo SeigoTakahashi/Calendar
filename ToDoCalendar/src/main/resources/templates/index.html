@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+		crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.2/main.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.2/main.min.css">
+	<style>
+		#event-form,
+		#range-form {
+			margin-top: 20px;
+		}
+
+		a {
+			text-decoration: none;
+			color: black;
+
+		}
+
+		#event-list,
+		#today-event-list {
+			margin-top: 20px;
+			border-collapse: collapse;
+			width: 100%;
+		}
+
+		#event-list th,
+		#event-list td,
+		#today-event-list th,
+		#today-event-list td {
+			border: 1px solid #ddd;
+			padding: 8px;
+		}
+
+		#event-list th,
+		#today-event-list th {
+			background-color: #f2f2f2;
+			text-align: left;
+		}
+
+		#countdown {
+			font-size: 20px;
+			color: red;
+		}
+
+		#calendar {
+			margin: 10px 100px;
+		}
+
+		#goals {
+			margin: 10px 100px;
+		}
+	</style>
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+		document.addEventListener('DOMContentLoaded', function () {
+			var events = /*[[${events}]]*/[];
+			var goals = /*[[${goals}]]*/[];
+			var goal = goals[0]; // ここではgoalsの最初の要素を使用
+			var startDate = goal.start_date;
+			var endDate_t = goal.end_date;
+
+			const endDate_g = new Date(endDate_t);
+
+			endDate_g.setDate(endDate_g.getDate() + 0.5);
+
+			const eventListEl = document.getElementById('event-list-body');
+			const todayEventListEl = document.getElementById('today-event-list-body');
+			const countdownEl = document.getElementById('countdown');
+			const calendarEl = document.getElementById('calendar');
+			const calendarEvents = events.map(function (event) {
+				const endDate_e = new Date(event.end_date);
+
+				endDate_e.setDate(endDate_e.getDate() + 1);
+				return {
+					id: event.id,
+					title: event.title,
+					start: event.start_date,
+					end: endDate_e,
+					allDay: true,
+					extendedProps: {
+						completed: event.completed
+					}
+				};
+			});
+
+
+			const calendar = new FullCalendar.Calendar(calendarEl, {
+				headerToolbar: {
+					left: 'prev,next today',
+					center: 'title',
+					right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+				},
+				initialView: 'dayGridMonth',
+				navLinks: true,
+				businessHours: true,
+				editable: true,
+				locale: 'ja',
+				allDayText: "終日",
+				dayCellContent: function (arg) {
+					return arg.date.getDate();
+				},
+				buttonText: {
+					prev: '<',
+					next: '>',
+					prevYear: '<<',
+					nextYear: '>>',
+					today: '今日',
+					month: '月',
+					week: '週',
+					day: '日',
+					list: '一覧'
+				},
+				validRange: {
+					start: startDate,
+					end: endDate_g
+				},
+				events: calendarEvents,
+				eventDidMount: function (info) {
+					// completedフラグに基づいてスタイルを適用
+					if (info.event.extendedProps.completed) {
+						info.el.style.backgroundColor = 'lightgreen';
+						info.el.style.borderColor = 'green';
+					} else {
+						info.el.style.backgroundColor = 'lightcoral';
+						info.el.style.borderColor = 'darkred';
+					}
+				},
+				dateClick: function (info) {
+					const addModal = new bootstrap.Modal(document.getElementById('addModal'));
+					document.getElementById('add_start_date').value = info.dateStr;
+					document.getElementById('add_end_date').value = info.dateStr;
+					addModal.show();
+					document.getElementById('add_closeButton').addEventListener('click', function () {
+						addModal.hide();
+					});
+					document.getElementById('addButton').addEventListener('click', function () {
+						document.getElementById('add-form').submit();
+						addModal.hide();
+					});
+				},
+				eventClick: function (info) {
+					const eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+					document.getElementById('event_title').value = info.event.title;
+					document.getElementById('start_date').value = info.event.startStr;
+					document.getElementById('end_date').value = info.event.endStr;
+					if (info.event.extendedProps.completed) {
+						document.getElementById('completed').checked = true;
+					}
+					eventModal.show();
+					document.getElementById('closeButton').addEventListener('click', function () {
+						eventModal.hide();
+					});
+
+					document.getElementById('removeButton').addEventListener('click', function () {
+						info.event.remove();
+						eventModal.hide();
+						document.getElementById('delete-eventid').value = info.event.id;
+						document.getElementById('delete-form').submit();
+					});
+
+					document.getElementById('editButton').addEventListener('click', function () {
+						document.getElementById('eventid').value = info.event.id;
+						document.getElementById('event-form').submit();
+						eventModal.hide();
+					});
+
+				}
+
+			});
+
+			calendar.render();
+
+			function updateCountdown(endDateStr) {
+				var endDate = new Date(endDateStr);
+				var today = new Date();
+
+				var timeDifference = endDate.getTime() - today.getTime();
+				if (timeDifference > 0) {
+					var daysRemaining = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+					countdownEl.innerHTML = `終了日まで残り: ${daysRemaining}日`;
+				} else {
+					countdownEl.innerHTML = '終了日を過ぎています';
+				}
+			}
+			updateCountdown(endDate);
+
+		});
+		/*]]>*/
+	</script>
+</head>
+
+<body>
+
+
+	<th:block th:each="goal : ${goals}">
+		<div id="goals">
+			<h4 th:text="${goal.name}"></h4>
+			<p th:text="${goal.start_date}"></p>
+			<p th:text="${goal.end_date}"></p>
+			<div id="countdown">終了日まで残り: </div>
+		</div>
+
+		<div id='calendar'></div>
+
+		<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+			aria-hidden="true">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="exampleModalLabel">編集</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close" id="closeButton">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<form id="event-form" th:action="@{/updateEvent}" method="POST">
+							<div class="mb-3">
+								<label for="event_title" class="form-label">ToDo:</label>
+								<input type="text" class="form-control" id="event_title" name="event_title" required>
+							</div>
+							<div class="mb-3">
+								<label for="start_date" class="form-label">開始日:</label>
+								<input type="date" id="start_date" class="form-control" name="start_date" required>
+							</div>
+							<div class="mb-3">
+								<label for="end_date" class="form-label">終了日:</label>
+								<input type="date" id="end_date" class="form-control" name="end_date" required>
+							</div>
+							<div class="mb-3">
+								<label for="completed" class="form-label">完了:</label>
+								<input type="checkbox" id="completed" name="completed">
+							</div>
+							<input type="hidden" name="goalid" th:value="${goal.id}">
+							<input type="hidden" name="eventid" id="eventid">
+						</form>
+						<form id="delete-form" style="display: none;" th:action="@{/deleteEvent}" method="POST">
+							<input type="hidden" name="goalid" th:value="${goal.id}">
+							<input type="hidden" name="eventid" id="delete-eventid">
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-danger" data-dismiss="modal" id="removeButton">削除</button>
+						<button type="button" class="btn btn-primary" id="editButton">編集</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+			aria-hidden="true">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="exampleModalLabel">追加</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close"
+							id="add_closeButton">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<form id="add-form" th:action="@{/addEvent}" method="POST">
+							<div class="mb-3">
+								<label for="event_title" class="form-label">ToDo:</label>
+								<input type="text" class="form-control" id="event_title" name="event_title" required>
+							</div>
+							<div class="mb-3">
+								<label for="add_start_date" class="form-label">開始日:</label>
+								<input type="date" id="add_start_date" class="form-control" name="start_date" required>
+							</div>
+							<div class="mb-3">
+								<label for="add_end_date" class="form-label">終了日:</label>
+								<input type="date" id="add_end_date" class="form-control" name="end_date" required>
+							</div>
+
+							<input type="hidden" name="id" th:value="${goal.id}">
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-primary" id="addButton">追加</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</th:block>
+
+
+</body>
+
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<th:block th:each="goal : ${goals}">
+		<a th:text="${goal.name}" th:href="@{/detail/{id}(id=${goal.id})}"></a>
+		<p th:text="${goal.start_date}"></p>
+		<p th:text="${goal.end_date}"></p>
+	</th:block>
+
+</body>
+</html>
